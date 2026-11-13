@@ -5,6 +5,6 @@
  * NUNCA coloque service_role/secret key neste arquivo ou no frontend.
  */
 window.TOTALSORTE_SUPABASE_CONFIG = {
-  url: "COLE_AQUI_A_PROJECT_URL",
+  url: "https://ulpwwkzgitraxgqcjatc.supabase.co/rest/v1/",
   anonKey: "COLE_AQUI_A_ANON_PUBLIC_KEY"
 };
