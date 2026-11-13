@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "TotalSorte - Assistente Lotofacil",
+  "version": "0.1.0",
+  "description": "Piloto local para marcar uma combinacao da Lotofacil e adiciona-la ao carrinho da CAIXA.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.loteriasonline.caixa.gov.br/silce-web/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

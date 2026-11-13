@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d1d">
+  <meta name="description" content="TotalSorte — estatísticas, grupos MIX e resultados.">
+  <title>TotalSorte</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuOpen" aria-label="Abrir menu">☰</button>
+      <a class="brand" href="#" aria-label="TotalSorte início"><span class="brand-mark">T</span><span>Total<span class="brand-accent">Sorte</span></span></a>
+      <button class="icon-btn notification-btn" aria-label="Notificações" id="notifyBtn">♧<i></i></button>
+    </header>
+
+    <main id="appMain" class="main-content">
+      <section class="page active" id="page-home">
+        <div class="welcome-row">
+        <div><p class="eyebrow">PAINEL DO PARTICIPANTE</p><h1>Olá, <span id="welcomeName">participante</span> <span>✦</span></h1><p class="muted">Acompanhe seus grupos e resultados.</p></div>
+        <div class="avatar" id="welcomeAvatar">TS</div>
+        </div>
+        <div class="balance-card">
+          <div class="balance-top"><span>CARTEIRA DE PREMIAÇÕES</span><span class="live-dot">● ATUALIZADA</span></div>
+          <p class="balance-label">Saldo disponível</p>
+          <div class="balance-value" id="homeBalance">R$ 0,00</div>
+          <div class="balance-bottom"><span id="homeReservedBalance">Saldo reservado: R$ 0,00</span><button class="text-button" data-page="wallet">Ver carteira →</button></div><div class="home-withdraw-row"><span id="connectionStatus">Conectando ao banco de dados…</span><button class="primary-btn" id="homeWithdrawOpen">Solicitar saque</button></div>
+        </div>
+        <div class="section-heading"><div><p class="eyebrow">CONFERÊNCIA DOS JOGOS</p><h2>Meus jogos</h2></div><span class="period-chip">Aguardando registro</span></div>
+        <div id="homeGames" class="home-games"><div class="empty-state">Nenhum jogo registrado.</div></div>
+        <p class="muted tiny game-legend" id="homeGamesNote">Os jogos e resultados serão exibidos após registro no sistema.</p>
+        <div class="section-heading"><div><p class="eyebrow">VISÃO GERAL</p><h2>Seu resumo</h2></div><span class="period-chip">Novembro 2026</span></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon cyan">◎</span><strong id="homeGroupCount">0</strong><small>Grupos ativos</small></article>
+          <article class="stat-card"><span class="stat-icon purple">♧</span><strong id="homeContestCount">0</strong><small>Concursos participando</small></article>
+          <article class="stat-card"><span class="stat-icon gold">✦</span><strong id="homePrizeBalance">R$ 0,00</strong><small>Premiações disponíveis</small></article>
+          <article class="stat-card"><span class="stat-icon green">✓</span><strong id="homePaymentCount">0</strong><small>Pagamentos confirmados</small></article>
+        </div>
+        <div class="section-heading"><div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Meus grupos</h2></div><button class="text-button" data-page="groups">Ver todos →</button></div>
+        <div id="homeGroupsList"><div class="empty-state">Nenhum grupo carregado.</div></div>
+        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Operação em ativação</strong><p>Autenticação, reservas, carteira e ações administrativas usam o banco quando configurado. Resultados, geração de jogos e registro de apostas ainda estão bloqueados.</p></div></div>
+      </section>
+
+      <section class="page" id="page-stats">
+        <div class="page-title"><p class="eyebrow">ANÁLISE DE DADOS</p><h1>Estatísticas</h1><p class="muted">Explore os últimos concursos de cada modalidade.</p></div>
+        <div class="segmented" role="tablist"><button class="selected" data-lottery="lotofacil">Lotofácil</button><button data-lottery="lotomania">Lotomania</button></div>
+        <div class="panel">
+          <div class="panel-heading"><div><span class="eyebrow">FREQUÊNCIA</span><h2>Dezenas em destaque</h2></div><span class="period-chip">Últimos 15</span></div>
+          <div id="frequencyList" class="frequency-list"><div class="empty-state">Nenhum concurso registrado.</div></div>
+        </div>
+        <div class="two-panels">
+          <div class="mini-panel"><span class="eyebrow">PADRÃO</span><h3>Ímpares × pares</h3><p class="muted tiny">Aguardando resultados oficiais.</p></div>
+          <div class="mini-panel"><span class="eyebrow">REPETIÇÃO</span><h3>Concurso anterior</h3><p class="muted tiny">Aguardando resultados oficiais.</p></div>
+        </div>
+        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Estatística não é previsão</strong><p>Frequências históricas descrevem resultados anteriores e não garantem nem aumentam a chance de um resultado futuro.</p></div></div>
+      </section>
+
+      <section class="page" id="page-groups">
+        <div class="page-title"><p class="eyebrow">PARTICIPAÇÃO</p><h1>Meus grupos</h1><p class="muted">Consulte rodadas, contribuições e jogos.</p></div>
+        <div class="filter-row"><span class="filter-chip active">Grupos disponíveis e participantes</span></div>
+        <div id="groupsList"><div class="empty-state">Entre na sua conta para consultar os grupos.</div></div>
+        <article class="group-card" id="mix031GroupCard" hidden>
+          <div class="group-card-top"><span class="status-pill status-amber" id="mix031GroupStatus">Aguardando</span><span class="group-code">MIX-031</span></div><h3>Grupo MIX Estrela</h3><p class="muted">Lotofácil + Lotomania · disponibilidade atualizada pelo banco</p>
+          <div class="group-details"><div><small>Minha contribuição</small><b id="mix031MyContribution">R$ 0,00</b></div><div><small>Cotas ocupadas</small><b id="mix031QuotaCount">—/10</b></div><div><small>Situação</small><b id="mix031PaymentStatus">Não participante</b></div></div>
+          <div class="group-game-preview" id="mix031GamesPanel" hidden>
+            <div class="game-preview-heading"><div><span class="eyebrow">JOGOS DO GRUPO</span><b id="mix031GameStatus">Prévia — aguardando fechamento do grupo</b><small id="mix031GameMeta">30 combinações provisórias · ainda não são apostas registradas</small></div><span class="status-pill status-amber" id="mix031GameBadge">PRÉVIA</span></div>
+            <div class="game-preview-scroll" id="mix031GameList" aria-live="polite"></div>
+            <p class="tiny muted" id="mix031GameSource">A prévia será substituída quando todas as 10 cotas estiverem preenchidas e os pagamentos confirmados.</p>
+          </div>
+          <button class="primary-btn full" data-action="contribute">Ver contribuição</button>
+        </article>
+      </section>
+
+      <section class="page" id="page-payment">
+        <div class="page-title">
+          <button class="back-link" data-page="groups">← Voltar aos grupos</button>
+          <p class="eyebrow">CONTRIBUIÇÃO DO GRUPO</p>
+          <h1>Escolha suas cotas</h1>
+          <p class="muted">Grupo <span id="paymentGroupCode">MIX-031</span> · Selecione de 1x a 5x. O valor será atualizado automaticamente.</p>
+        </div>
+        <div class="panel contribution-panel">
+          <div class="contribution-summary">
+            <div><small>Vagas disponíveis no banco</small><strong id="quotaAvailability">Consultando…</strong></div>
+            <span class="status-pill status-amber" id="quotaGroupStatus">Aguardando conexão</span>
+          </div>
+          <p class="eyebrow">QUANTIDADE DE COTAS</p>
+          <div class="quota-options" id="quotaOptions" role="group" aria-label="Escolha a quantidade de cotas">
+            <button type="button" class="quota-option selected" data-multiplier="1"><b>1x</b><small>R$ 10,50</small></button>
+            <button type="button" class="quota-option" data-multiplier="2"><b>2x</b><small>R$ 21,00</small></button>
+            <button type="button" class="quota-option" data-multiplier="3"><b>3x</b><small>R$ 31,50</small></button>
+            <button type="button" class="quota-option" data-multiplier="4"><b>4x</b><small>R$ 42,00</small></button>
+            <button type="button" class="quota-option" data-multiplier="5"><b>5x</b><small>R$ 52,50</small></button>
+          </div>
+          <div class="contribution-total"><span>Total da contribuição</span><strong id="contributionAmount">R$ 10,50</strong></div>
+        </div>
+        <div class="panel pix-payment-panel">
+          <div class="panel-heading"><div><span class="eyebrow">PAGAMENTO</span><h2>PIX do TotalSorte</h2></div><span class="status-pill status-amber">Pendente</span></div>
+          <p class="muted">Escaneie o QR Code abaixo ou copie o código PIX. Confira se o valor informado no aplicativo do banco é o mesmo exibido aqui.</p>
+          <button class="primary-btn full" id="createQuotaPayment" type="button">Reservar cotas e iniciar pagamento</button>
+          <p class="muted tiny" id="quotaPaymentStatus" role="status">A reserva e o pagamento serão registrados após conectar sua conta.</p>
+          <div id="pixPaymentDetails" hidden>
+            <div class="pix-qr-wrap"><img id="pixQrImage" src="assets/pix/pix-1x.png" alt="QR Code PIX"><b id="pixQrCaption"></b></div>
+            <label class="pix-code-label" for="pixPayload">PIX Copia e Cola</label>
+            <textarea id="pixPayload" class="pix-payload" rows="4" readonly spellcheck="false"></textarea>
+            <button class="outline-btn full" id="copyPixButton" type="button">Copiar código PIX</button>
+            <div class="whatsapp-proof">
+              <div class="whatsapp-heading"><span class="whatsapp-icon">◉</span><div><b>Envie seu comprovante pelo WhatsApp</b><small>Mensagem preenchida com grupo, cotas e valor.</small></div></div>
+              <a class="whatsapp-button" id="whatsappProofLink" href="https://wa.me/qr/GGEL72Q2HNF5E1?s=v" target="_blank" rel="noopener noreferrer">Abrir WhatsApp e enviar comprovante ↗</a>
+            </div>
+            <div class="notice-card payment-notice"><span class="notice-icon">ⓘ</span><div><strong>Atenção: pagamento ainda não confirmado</strong><p>Depois de pagar, envie o comprovante pelo WhatsApp ou aguarde. Sua participação e suas cotas só serão confirmadas após a conferência manual do administrador.</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-results">
+        <div class="page-title"><p class="eyebrow">ACOMPANHAMENTO</p><h1>Resultados</h1><p class="muted">Resultados oficiais serão exibidos após a integração backend.</p></div>
+        <div id="contestResults"><div class="empty-state">Resultados oficiais ainda não foram carregados.</div></div>
+      </section>
+
+      <section class="page" id="page-profile">
+        <div class="page-title"><p class="eyebrow">SUA CONTA</p><h1>Perfil</h1></div>
+        <div class="profile-card"><div class="avatar avatar-large" id="profileAvatar">TS</div><h2 id="profileName">Visitante</h2><p class="muted" id="profileRole">Entre para acessar sua conta.</p><span class="rank-badge" id="profileCreated">TotalSorte</span></div>
+        <button class="outline-btn full" id="logoutButton" type="button" hidden>Sair da conta</button>
+        <div class="panel auth-shortcuts"><button data-page="login">Entrar em outra conta <b>→</b></button><button data-page="register">Criar cadastro de cliente <b>→</b></button></div>
+        <div class="panel menu-list"><button data-page="wallet"><span>◈</span> Carteira de premiações <b>→</b></button><button data-page="history"><span>◷</span> Histórico de atividades <b>→</b></button><button data-page="settings"><span>⚙</span> Configurações <b>→</b></button><button data-page="help"><span>?</span> Ajuda e suporte <b>→</b></button></div>
+        <button class="outline-btn full" id="installProfile">Instalar TotalSorte no celular</button>
+        <p class="muted tiny center">TotalSorte 0.8.0</p>
+      </section>
+
+      <section class="page" id="page-wallet">
+        <div class="page-title"><button class="back-link" data-page="profile">← Perfil</button><p class="eyebrow">FINANCEIRO</p><h1>Minha carteira</h1><p class="muted">Saldo, reservas e saques registrados.</p></div>
+        <div class="balance-card wallet-balance"><div class="balance-top"><span>SALDO DISPONÍVEL</span><span class="live-dot" id="walletConnectionState">● NÃO CONECTADO</span></div><div class="balance-value" id="walletBalance">R$ 0,00</div><div class="wallet-summary"><div><small>Reservado</small><b id="walletReservedBalance">R$ 0,00</b></div><div><small>Prêmios creditados</small><b id="walletReceivedBalance">R$ 0,00</b></div></div></div>
+        <button class="primary-btn full" id="withdrawOpen">Solicitar saque</button>
+        <div class="section-heading"><div><p class="eyebrow">LANÇAMENTOS</p><h2>Extrato</h2></div></div>
+        <div id="walletTransactions"><div class="empty-state">Nenhum lançamento.</div></div>
+        <div class="section-heading"><div><p class="eyebrow">SAQUES</p><h2>Solicitações</h2></div></div>
+        <div id="withdrawalList" class="withdrawal-list"><div class="empty-state">Entre na sua conta para consultar saques.</div></div>
+        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Como funciona</strong><p>Ao solicitar, o valor fica reservado no banco. O administrador realiza o PIX manualmente e confirma a transferência após conferi-la.</p></div></div>
+      </section>
+
+      <section class="page" id="page-admin">
+        <div class="admin-welcome"><div><p class="eyebrow">TOTALSORTE · CONTROLE CENTRAL</p><h1>Painel administrativo</h1><p class="muted">Área restrita.</p></div><span class="admin-status">Aguardando autenticação</span></div>
+        <div class="admin-metrics">
+          <article class="admin-metric"><small>CLIENTES</small><b id="adminClientCount">—</b><span>Contas cadastradas</span></article>
+          <article class="admin-metric"><small>GRUPOS ATIVOS</small><b id="adminGroupCount">—</b><span>Grupos no banco</span></article>
+          <article class="admin-metric alert"><small>PIX PENDENTES</small><b id="adminPendingCount">—</b><span>Aguardando conferência</span></article>
+          <article class="admin-metric"><small>SAQUES</small><b id="adminWithdrawalCount">—</b><span>Solicitações abertas</span></article>
+        </div>
+        <div class="admin-section-head"><div><p class="eyebrow">OPERAÇÃO</p><h2>Central de gerenciamento</h2></div></div>
+        <div class="admin-shortcuts">
+          <button data-admin-scroll="adminPix"><span>▣</span><b>Pagamentos PIX</b><small>Conferir e aprovar</small></button>
+          <button data-admin-scroll="adminGroups"><span>♧</span><b>Grupos MIX</b><small>Vagas e participantes</small></button>
+          <button data-admin-scroll="adminClients"><span>♙</span><b>Clientes</b><small>Contas e acesso</small></button>
+          <button data-admin-scroll="adminWithdrawals"><span>⇄</span><b>Saques</b><small>Solicitações</small></button>
+          <button data-admin-scroll="adminContests"><span>◉</span><b>Concursos</b><small>Rodadas e resultados</small></button>
+          <button data-admin-scroll="adminCaixaAssistant"><span>↗</span><b>Teste CAIXA</b><small>Assistente Lotofácil</small></button>
+          <button data-admin-scroll="adminReports"><span>▤</span><b>Relatórios</b><small>Resumo financeiro</small></button>
+          <button data-admin-scroll="adminNotifications"><span>♧</span><b>Notificações</b><small>Avisos do sistema</small></button>
+          <button data-admin-scroll="adminSettings"><span>⚙</span><b>Configurações</b><small>Regras da operação</small></button>
+        </div>
+        <section class="admin-panel-block" id="adminPix">
+          <div class="admin-section-head"><div><p class="eyebrow">AÇÃO PRIORITÁRIA</p><h2>Pendências PIX</h2><p class="muted">Confira o comprovante e compare com o extrato do banco antes de decidir.</p></div><span class="status-pill status-amber" id="pixPendingBadge">— pendentes</span></div>
+          <div class="admin-filter-row"><button class="filter-chip active" data-pix-filter="all">Todas</button><button class="filter-chip" data-pix-filter="pending">Pendentes</button><button class="filter-chip" data-pix-filter="confirmed">Confirmadas</button><button class="filter-chip" data-pix-filter="rejected">Recusadas</button></div>
+          <div id="adminPixList" class="admin-pix-list"></div>
+          <p class="admin-note">Confira o extrato bancário antes de confirmar. A decisão e a justificativa são gravadas no banco e na auditoria.</p>
+        </section>
+        <section class="admin-panel-block" id="adminGroups"><div class="admin-section-head"><div><p class="eyebrow">PARTICIPAÇÃO</p><h2>Grupos MIX</h2></div><button class="outline-btn" id="createGroupButton" type="button">＋ Criar grupo</button></div>
+          <article class="admin-list-card"><div><b>MIX-031 · Estrela</b><small id="adminMix031Summary">Carregando grupo do banco…</small><div class="progress-track"><span id="adminMix031Progress" style="width:0%"></span></div><button class="outline-btn" id="demoCloseMixGroup" type="button" disabled title="O fechamento operacional requer integração de resultados no backend.">Fechamento de grupo indisponível</button><button class="outline-btn" id="demoNextMixContest" type="button" hidden disabled>Próxima rodada indisponível</button>
+            <div class="mix-official-registration" id="mixOfficialRegistration">
+              <div class="mix-official-heading"><div><b>Registro oficial das apostas</b><small>Um único registro administrativo para o conjunto dos 30 jogos desta rodada.</small></div><span class="status-pill status-amber" id="mixOfficialStatus">Aguardando registro</span></div>
+              <div class="mix-official-fields">
+                <label>Concurso Lotofácil<input id="mixOfficialContestLf" inputmode="numeric" placeholder="Nº do concurso"></label>
+                <label>Concurso Lotomania<input id="mixOfficialContestLm" inputmode="numeric" placeholder="Nº do concurso"></label>
+                <label class="mix-official-total">Valor total efetivamente pago (R$)<input id="mixOfficialPaidAmount" inputmode="decimal" type="number" min="0.01" step="0.01" value="105.00"></label>
+              </div>
+              <p class="admin-note">O valor de R$ 105,00 é uma referência inicial (30 × R$ 3,50) e pode ser ajustado ao valor realmente pago. A confirmação não exige anexar comprovante; ela depende da sua conferência e ação manual.</p>
+              <button class="primary-btn full" id="confirmMixOfficialRegistration" type="button" disabled>Confirmar apostas realizadas</button>
+              <div class="mix-official-history" id="mixOfficialHistory"><small>Nenhuma rodada registrada ainda.</small></div>
+            </div>
+          </div><span class="status-pill status-amber" id="adminMix031Status">Prévia</span></article>
+        </section>
+        <section class="admin-panel-block" id="adminCaixaAssistant">
+          <div class="admin-section-head">
+            <div><p class="eyebrow">PORTAL OFICIAL + ASSISTENTE</p><h2>Registro assistido na CAIXA</h2></div>
+            <span class="status-pill status-amber">Piloto · 1 jogo</span>
+          </div>
+          <div class="caixa-portal-frame" role="region" aria-label="Acesso ao portal oficial da CAIXA">
+            <div class="caixa-portal-frame-head"><span class="live-dot">● PORTAL OFICIAL</span><span>loteriasonline.caixa.gov.br</span></div>
+            <div class="caixa-portal-frame-body">
+              <span class="brand-mark">T</span>
+              <h3>A CAIXA não permite abrir o portal dentro desta página</h3>
+              <p>O portal envia a instrução <code>X-Frame-Options: DENY</code>, que bloqueia a incorporação em iframe. Para manter sua sessão protegida, abra o endereço oficial em outra aba e entre diretamente na CAIXA.</p>
+              <a class="primary-btn caixa-portal-link" href="https://www.loteriasonline.caixa.gov.br/silce-web/#/home" target="_blank" rel="noopener noreferrer">Abrir Loterias CAIXA em outra aba ↗</a>
+              <small>Depois, deixe esta página do TotalSorte aberta para preparar e revisar o jogo.</small>
+            </div>
+          </div>
+          <p class="muted">Piloto da Lotofácil: selecione 15 dezenas abaixo e copie a combinação para o assistente da extensão instalada no portal. A extensão tenta marcar as dezenas; você confere e decide se adiciona o jogo ao carrinho.</p>
+          <div class="caixa-number-grid" id="caixaTestNumberGrid" aria-label="Dezenas para o jogo de teste Lotofácil"></div>
+          <div class="contribution-total"><span id="caixaTestSelectionCount">0 de 15 dezenas</span><strong id="caixaTestSelectionStatus">Selecione 15</strong></div>
+          <textarea id="caixaTestPayload" class="pix-payload" rows="2" readonly aria-label="Combinação do teste"></textarea>
+          <div class="admin-actions">
+            <button class="outline-btn" id="copyCaixaTestGame" type="button">Copiar combinação</button>
+          </div>
+          <p class="admin-note">Não informe sua senha no TotalSorte. Instale a extensão local em <code>loterias-assistente</code> (detalhes no README), entre manualmente no portal e selecione Lotofácil antes de usar. O piloto não finaliza aposta nem pagamento; confira as dezenas e o carrinho diretamente no portal.</p>
+          <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Modo de teste</strong><p>Esta combinação é montada manualmente e não vem de um jogo definitivo salvo no banco. Não use para aposta real. A extensão é experimental e pode parar se o portal alterar a tela.</p></div></div>
+        </section>
+        <section class="admin-panel-block" id="adminClients"><div class="admin-section-head"><div><p class="eyebrow">CADASTROS</p><h2>Clientes</h2></div></div><div id="adminClientList"><div class="empty-state">Nenhum cliente carregado.</div></div>
+          <div class="panel"><h3>Creditar premiação</h3><label for="prizeParticipant">Participante</label><select id="prizeParticipant" required><option value="">Selecione</option></select><label for="prizeAmount">Valor (R$)</label><input id="prizeAmount" type="number" min="0.01" step="0.01" required><label for="prizeDescription">Descrição e referência</label><input id="prizeDescription" type="text" maxlength="160" placeholder="Ex.: prêmio do concurso 1234" required><button class="primary-btn full" id="creditPrizeButton" type="button">Creditar premiação</button></div>
+        </section>
+        <section class="admin-panel-block" id="adminWithdrawals"><div class="admin-section-head"><div><p class="eyebrow">FINANCEIRO</p><h2>Solicitações de saque</h2></div></div><div id="adminWithdrawalList" class="admin-pix-list"><div class="empty-state">Nenhuma solicitação carregada.</div></div></section>
+        <section class="admin-panel-block" id="adminContests"><div class="admin-section-head"><div><p class="eyebrow">APURAÇÃO</p><h2>Concursos e rodadas</h2></div></div><div id="adminContestList" class="empty-state">Integração de resultados oficiais ainda não configurada.</div></section>
+        <section class="admin-panel-block" id="adminReports"><div class="admin-section-head"><div><p class="eyebrow">VISÃO FINANCEIRA</p><h2>Relatórios</h2></div></div><div class="admin-report-grid" id="adminReportList"><div class="empty-state">Relatórios aguardando dados do banco.</div></div></section>
+        <section class="admin-panel-block" id="adminNotifications"><div class="admin-section-head"><div><p class="eyebrow">COMUNICAÇÃO</p><h2>Notificações</h2></div></div><div class="admin-list-card"><div><b>Sem alertas carregados</b><small>As notificações serão conectadas em uma etapa posterior.</small></div></div></section>
+        <section class="admin-panel-block" id="adminSettings"><div class="admin-section-head"><div><p class="eyebrow">SISTEMA</p><h2>Configurações</h2></div></div><div class="admin-list-card"><div><b>Limite por grupo</b><small>10 cotas · multiplicador individual de 1x a 5x</small></div><span class="status-pill status-green">Configurado</span></div><div class="admin-list-card"><div><b>Reserva de cotas</b><small>Liberação somente por ação administrativa</small></div><span class="status-pill status-green">Manual</span></div></section>
+        <section class="admin-panel-block" id="adminAudit"><div class="admin-section-head"><div><p class="eyebrow">RASTREABILIDADE</p><h2>Histórico de ações</h2></div></div><div id="adminAuditList" class="admin-audit-list"><div class="empty-state">Nenhuma ação realizada nesta sessão.</div></div></section>
+        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Operações financeiras</strong><p>Confirmação de PIX e saques são manuais. Confirme no extrato bancário antes de aprovar e consulte as obrigações legais e de proteção de dados antes de operar com dinheiro real.</p></div></div>
+        <button class="outline-btn full" data-page="login">← Voltar ao acesso</button>
+      </section>
+
+      <section class="page" id="page-login">
+        <div class="page-title"><button class="back-link" data-page="profile">← Voltar ao perfil</button><p class="eyebrow">ACESSO SEGURO</p><h1>Entrar no TotalSorte</h1><p class="muted">Acesse sua conta de participante ou a área administrativa.</p></div>
+        <div class="panel auth-panel">
+          <div class="segmented auth-role"><button class="selected" type="button" data-role="cliente">Cliente</button><button type="button" data-role="admin">Administrador</button></div>
+          <form id="loginForm">
+            <label for="loginUser">E-mail</label><input id="loginUser" name="username" type="email" autocomplete="username" placeholder="Digite seu e-mail" required>
+            <label for="loginPassword">Senha</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+            <button class="primary-btn full auth-submit" type="submit">Entrar</button>
+          </form>
+          <p class="muted tiny auth-security-note" id="loginMessage">A autenticação será validada pelo Supabase.</p>
+          <button class="text-button full" data-page="register">Ainda não tem cadastro? Criar conta</button>
+        </div>
+      </section>
+      <section class="page" id="page-register">
+        <div class="page-title"><button class="back-link" data-page="login">← Voltar ao login</button><p class="eyebrow">NOVO PARTICIPANTE</p><h1>Criar cadastro</h1><p class="muted">Preencha os dados para preparar sua conta no TotalSorte.</p></div>
+        <div class="panel auth-panel">
+          <form id="registerForm">
+            <label for="registerName">Nome completo</label><input id="registerName" autocomplete="name" placeholder="Seu nome completo" required>
+            <label for="registerDisplay">Nome de exibição</label><input id="registerDisplay" placeholder="Como aparecerá no aplicativo" required>
+            <label for="registerEmail">E-mail</label><input id="registerEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+            <label for="registerPhone">Celular (opcional)</label><input id="registerPhone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000">
+            <label for="registerPassword">Criar senha</label><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres" required>
+            <label for="registerPasswordConfirm">Confirmar senha</label><input id="registerPasswordConfirm" type="password" autocomplete="new-password" minlength="8" placeholder="Digite a senha novamente" required>
+            <label class="check-label"><input id="registerTerms" type="checkbox" required> Li e aceito os termos e a política de privacidade.</label>
+            <button class="primary-btn full auth-submit" type="submit">Preparar meu cadastro</button>
+          </form>
+          <p class="muted tiny auth-security-note" id="registerMessage">A conta será criada pelo Supabase. Pode ser necessário confirmar o e-mail antes de entrar.</p>
+        </div>
+      </section>
+      <section class="page" id="page-history"><div class="page-title"><button class="back-link" data-page="profile">← Perfil</button><p class="eyebrow">CONTA</p><h1>Histórico</h1></div><div class="panel" id="activityHistory"><div class="empty-state">Nenhum histórico disponível.</div></div></section>
+      <section class="page" id="page-settings"><div class="page-title"><button class="back-link" data-page="profile">← Perfil</button><p class="eyebrow">PREFERÊNCIAS</p><h1>Configurações</h1></div><div class="panel menu-list"><button id="themeToggle"><span>◐</span> Alternar tema <b>↔</b></button><button id="installSettings"><span>⬇</span> Instalar aplicativo <b>→</b></button><button data-action="about"><span>ⓘ</span> Sobre o TotalSorte <b>→</b></button></div></section>
+      <section class="page" id="page-help"><div class="page-title"><button class="back-link" data-page="profile">← Perfil</button><p class="eyebrow">CENTRAL DE AJUDA</p><h1>Ajuda e suporte</h1></div><div class="panel"><h2>Precisa de ajuda?</h2><p class="muted">Esta versão é um protótipo visual. O suporte, notificações e integrações serão conectados em etapas futuras.</p><button class="outline-btn full" data-action="about">Sobre esta versão</button></div></section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegação principal">
+      <button class="nav-item active" data-page="home"><span>⌂</span><small>Início</small></button>
+      <button class="nav-item" data-page="stats"><span>▥</span><small>Estatísticas</small></button>
+      <button class="nav-item" data-page="groups"><span>♧</span><small>Grupos</small></button>
+      <button class="nav-item" data-page="results"><span>◉</span><small>Resultados</small></button>
+      <button class="nav-item" data-page="profile"><span>◌</span><small>Perfil</small></button>
+    </nav>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="drawer" aria-label="Menu secundário">
+    <div class="drawer-head"><span class="brand-mark">T</span><div><b>TotalSorte</b><small>Menu de navegação</small></div><button class="icon-btn" id="menuClose">×</button></div>
+    <p class="eyebrow drawer-label">FERRAMENTAS</p>
+    <button data-page="stats">◈ <span>Inteligência e gerador</span><b>›</b></button>
+    <button data-page="history">◷ <span>Histórico de concursos</span><b>›</b></button>
+    <button data-page="wallet">▤ <span>Financeiro</span><b>›</b></button>
+    <button data-page="help">? <span>Ajuda e suporte</span><b>›</b></button>
+    <button data-page="settings">⚙ <span>Configurações</span><b>›</b></button>
+    <button data-page="login">⇥ <span>Login / área administrativa</span><b>›</b></button>
+    <div class="drawer-note">Acesso administrativo real será protegido pelo servidor. Demonstração local disponível no login.</div>
+  </aside>
+
+  <div class="modal-backdrop" id="withdrawModal">
+    <div class="modal">
+      <div class="modal-head"><div><p class="eyebrow">CARTEIRA</p><h2>Solicitar saque</h2></div><button class="icon-btn" id="withdrawClose">×</button></div>
+      <p class="muted">Informe quanto deseja receber via PIX. O valor será reservado enquanto o administrador processa a solicitação.</p>
+      <label for="withdrawAmount">Valor do saque (R$)</label>
+      <input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="Ex.: 25,00">
+      <label for="pixKey">Sua chave PIX</label>
+      <input id="pixKey" type="text" placeholder="Informe sua chave PIX">
+      <div class="available-line"><span>Saldo disponível</span><b id="availableAmount">R$ 0,00</b></div>
+      <button class="primary-btn full" id="withdrawSubmit">Enviar solicitação</button>
+      <p class="tiny muted">A solicitação não pode ser cancelada pelo participante. Se houver falha no pagamento, o administrador poderá registrar a ocorrência e liberar o valor reservado.</p>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="js/supabase-config.js"></script>
+  <script type="module" src="js/supabase-client.js"></script>
+  <script src="js/app.js"></script>
+  <script type="module" src="js/supabase-workflows.js"></script>
+</body>
+</html>
