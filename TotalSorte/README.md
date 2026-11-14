@@ -1,4 +1,4 @@
-# TotalSorte — Protótipo 0.6.2
+# TotalSorte — Protótipo 0.9.2
 
 Esta versão parte do protótipo 0.3.0 e acrescenta o fluxo visual de contribuição com os cinco códigos PIX informados pelo responsável e o contato de WhatsApp para envio de comprovante.
 
@@ -90,7 +90,27 @@ Login, cadastro, grupos, cotas, pagamentos, painel administrativo, resultados e 
 - Créditos de premiação exigem admin, chave de idempotência e registro de auditoria.
 - O service worker não armazena respostas do Supabase em cache.
 
-**Ativação:** aplicar também `supabase/migrations/202611090002_operational_workflows.sql` no projeto existente e preencher a URL e a chave pública em `js/supabase-config.js`. A geração/registro definitivo de jogos, importação de resultados oficiais e notificações continuam bloqueados; não usar o app para apostar ou movimentar dinheiro antes de concluir essas etapas, testar RLS com contas separadas e validar as obrigações legais e de privacidade.
+**Ativação dos resultados, jogos e prêmios:** aplique `supabase/migrations/202611130001_game_generation.sql` e `supabase/migrations/202611130002_prize_distribution.sql` e publique as Edge Functions `sync-contests` e `generate-group-games` pelo Supabase CLI. O admin pode buscar os últimos 15 concursos, criar grupos com 30 jogos e registrar manualmente os concursos das apostas realizadas. O sistema compara os jogos com os resultados e prepara o rateio proporcional às cotas pagas; o crédito só ocorre após confirmação do admin. Não use o app para apostar ou movimentar dinheiro antes de concluir a configuração, testar RLS com contas separadas e validar as obrigações legais e de privacidade.
+
+## Atualização 0.9.0 — grupos, jogos e rateio
+
+- Acesso à conta visível no cabeçalho, alternando para “Minha conta” após autenticação.
+- Sincronização administrativa dos últimos 15 concursos e dos valores oficiais de prêmio por faixa.
+- Criação atômica de novos grupos com 15 jogos de Lotofácil e 15 de Lotomania, visíveis aos clientes antes da participação.
+- Registro manual dos concursos efetivamente apostados; cálculo dos acertos e prévia de rateio proporcional às cotas pagas.
+- Crédito dos saldos somente após confirmação do admin, em transação única, auditada e sem duplicidade por rodada.
+- As combinações usam dados recentes e critérios de diversidade; isso não prevê resultados nem aumenta as chances matemáticas.
+
+## Atualização 0.9.1 — estatísticas automáticas
+
+- A tela Estatísticas lê do Supabase os últimos 15 concursos de cada modalidade e mostra histórico, frequência, paridade e repetição.
+- A tela atualiza ao abrir, pelo botão manual ou a cada 15 minutos enquanto estiver visível.
+- O Supabase pode sincronizar a CAIXA a cada 6 horas mesmo sem usuários conectados; consulte `supabase/README.md` para configurar Edge Function, Vault e Cron.
+
+## Atualização 0.9.2 — estatísticas públicas
+
+- Resultados oficiais podem ser consultados sem login; a política permite somente leitura.
+- A sincronização de servidor usa segredo próprio no Supabase Vault e preserva a última atualização válida em caso de falha na CAIXA.
 
 ## Piloto assistido — portal e carrinho da Lotofácil
 

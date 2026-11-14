@@ -10,6 +10,7 @@ function showPage(name){
   $$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
   document.body.classList.remove("drawer-open");
   window.scrollTo({top:0,behavior:"smooth"});
+  if(name==="stats")window.dispatchEvent(new CustomEvent("totalsorte:stats-requested"));
 }
 function toast(message){
   const el=$("#toast"); el.textContent=message; el.classList.add("show");
@@ -21,19 +22,83 @@ $("#menuClose").addEventListener("click",()=>document.body.classList.remove("dra
 $("#drawerBackdrop").addEventListener("click",()=>document.body.classList.remove("drawer-open"));
 $("#notifyBtn").addEventListener("click",()=>toast("Você está em uma versão de demonstração."));
 
-const demoFrequency = {
- lotofacil:[],
- lotomania:[]
-};
-function renderFrequency(lottery="lotofacil"){
- const rows=demoFrequency[lottery];
- $("#frequencyList").innerHTML=rows.length?rows.map(x=>`<div class="freq-row"><span class="freq-number">${x.n}</span><div class="freq-track"><span style="width:${x.v/15*100}%"></span></div><span class="freq-count">${x.v}</span></div>`).join(""):'<div class="empty-state">Estatísticas oficiais ainda não foram carregadas.</div>';
+const contestStats = {lotofacil:[],lotomania:[]};
+let activeLottery = "lotofacil";
+function renderFrequency(lottery=activeLottery){
+ activeLottery=lottery;
+ const draws=contestStats[lottery]||[];
+ const list=$("#frequencyList");
+ const history=$("#contestHistoryList");
+ const parity=$("#statsParity");
+ const repetition=$("#statsRepeat");
+ if(!draws.length){
+  list.replaceChildren(Object.assign(document.createElement("div"),{className:"empty-state",textContent:"Estatísticas oficiais ainda não foram carregadas."}));
+  history.replaceChildren(Object.assign(document.createElement("div"),{className:"empty-state",textContent:"Aguardando resultados oficiais."}));
+  parity.textContent="Aguardando resultados oficiais.";
+  repetition.textContent="Aguardando resultados oficiais.";
+  return;
+ }
+
+ const minimum=lottery==="lotofacil"?1:0;
+ const maximum=lottery==="lotofacil"?25:99;
+ const frequency=Array(maximum-minimum+1).fill(0);
+ let oddCount=0;
+ for(const draw of draws){
+  for(const number of draw.drawn_numbers){
+   frequency[number-minimum]+=1;
+   if(number%2!==0)oddCount+=1;
+  }
+ }
+ const topNumbers=frequency.map((count,index)=>({number:index+minimum,count}))
+  .sort((left,right)=>right.count-left.count||left.number-right.number).slice(0,10);
+ const maxFrequency=Math.max(1,...topNumbers.map(item=>item.count));
+ list.replaceChildren();
+ for(const item of topNumbers){
+  const row=document.createElement("div");row.className="freq-row";
+  const number=document.createElement("span");number.className="freq-number";number.textContent=String(item.number).padStart(2,"0");
+  const track=document.createElement("div");track.className="freq-track";
+  const fill=document.createElement("span");fill.style.width=`${item.count/maxFrequency*100}%`;track.append(fill);
+  const count=document.createElement("span");count.className="freq-count";count.textContent=String(item.count);
+  row.append(number,track,count);list.append(row);
+ }
+
+ const totalNumbers=draws.reduce((sum,draw)=>sum+draw.drawn_numbers.length,0);
+ parity.textContent=`Ímpares: ${oddCount} · Pares: ${totalNumbers-oddCount} · ${draws.length} concursos`;
+ if(draws.length>1){
+  const previous=new Set(draws[1].drawn_numbers);
+  const repeated=draws[0].drawn_numbers.filter(number=>previous.has(number)).length;
+  repetition.textContent=`${repeated} dezenas repetidas entre os concursos ${draws[0].contest_number} e ${draws[1].contest_number}.`;
+ }else repetition.textContent="Aguardando o concurso anterior.";
+
+ history.replaceChildren();
+ for(const draw of draws){
+  const article=document.createElement("article");article.className="contest-history-item";
+  const heading=document.createElement("div");heading.className="contest-history-heading";
+  const date=draw.draw_date?new Date(`${draw.draw_date}T00:00:00`).toLocaleDateString("pt-BR"):"Data indisponível";
+  const label=document.createElement("b");label.textContent=`Concurso ${draw.contest_number} · ${date}`;
+  heading.append(label);
+  const numbers=document.createElement("div");numbers.className="contest-history-numbers";
+  for(const value of draw.drawn_numbers){
+   const ball=document.createElement("span");ball.className="ball";ball.textContent=String(value).padStart(2,"0");numbers.append(ball);
+  }
+  article.append(heading,numbers);history.append(article);
+ }
 }
 $$("[data-lottery]").forEach(btn=>btn.addEventListener("click",()=>{
- $$("[data-lottery]").forEach(b=>b.classList.toggle("selected",b===btn));
+ $$('[data-lottery]').forEach(b=>b.classList.toggle("selected",b===btn));
  renderFrequency(btn.dataset.lottery);
 }));
 renderFrequency();
+window.addEventListener("totalsorte:contests-updated",event=>{
+ const detail=event.detail||{};
+ if(detail.error){$("#statsRefreshStatus").textContent=detail.error;return;}
+ contestStats.lotofacil=detail.lotofacil||[];
+ contestStats.lotomania=detail.lotomania||[];
+ const refreshedAt=detail.fetchedAt?new Date(detail.fetchedAt).toLocaleString("pt-BR"):"agora";
+ $("#statsRefreshStatus").textContent=`Dados salvos no Supabase · última atualização ${refreshedAt}`;
+ renderFrequency(activeLottery);
+});
+$("#refreshStatsButton").addEventListener("click",()=>window.dispatchEvent(new CustomEvent("totalsorte:stats-requested")));
 function renderBalls(id, nums){$(id).innerHTML=nums.map(n=>`<span class="ball">${String(n).padStart(2,"0")}</span>`).join("");}
 
 function openWithdraw(){ $("#availableAmount").textContent=currency(availableBalance); $("#withdrawModal").classList.add("open"); }

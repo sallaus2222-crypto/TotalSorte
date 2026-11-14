@@ -20,10 +20,58 @@ let adminPayments = [];
 let adminWithdrawals = [];
 let adminFilter = "all";
 let selectedGroupCode = "MIX-031";
+let adminContestHistoryReady = false;
+let adminGameSets = [];
+let adminBetRegistrations = [];
+let adminPrizeDistributions = [];
+let pendingGroupPrizeCalculation = null;
 
 function notify(message) {
   if (typeof window.toast === "function") window.toast(message);
 }
+
+function publishContestStats(detail) {
+  window.dispatchEvent(new CustomEvent("totalsorte:contests-updated", { detail }));
+}
+
+async function loadPublicContestStats() {
+  if (!supabase) {
+    publishContestStats({ error: "Configure a conexão Supabase para carregar resultados oficiais." });
+    return;
+  }
+  const [lotofacil, lotomania] = await Promise.all([
+    supabase.from("contests").select("modality, contest_number, draw_date, drawn_numbers, fetched_at")
+      .eq("modality", "LOTOFACIL").order("contest_number", { ascending: false }).limit(15),
+    supabase.from("contests").select("modality, contest_number, draw_date, drawn_numbers, fetched_at")
+      .eq("modality", "LOTOMANIA").order("contest_number", { ascending: false }).limit(15)
+  ]);
+  if (lotofacil.error || lotomania.error) {
+    publishContestStats({ error: "Não foi possível carregar resultados oficiais. Verifique a conexão e a migração de estatísticas." });
+    return;
+  }
+  const rows = [...(lotofacil.data || []), ...(lotomania.data || [])];
+  const fetchedAt = rows.reduce((latest, row) => !latest || row.fetched_at > latest ? row.fetched_at : latest, null);
+  publishContestStats({
+    lotofacil: lotofacil.data || [],
+    lotomania: lotomania.data || [],
+    fetchedAt
+  });
+}
+
+window.addEventListener("totalsorte:stats-requested", () => {
+  loadPublicContestStats().catch(error => {
+    console.error("Falha ao carregar estatísticas oficiais.", error);
+    publishContestStats({ error: "Falha ao carregar resultados oficiais." });
+  });
+});
+
+window.setInterval(() => {
+  if (document.visibilityState === "visible") {
+    loadPublicContestStats().catch(error => {
+      console.error("Falha ao atualizar estatísticas oficiais.", error);
+    });
+  }
+}, 15 * 60 * 1000);
 
 function setText(selector, value) {
   const element = $(selector);
@@ -39,6 +87,13 @@ function setConnectionStatus(connected, message) {
   setText("#connectionStatus", message);
   setText("#walletConnectionState", connected ? "● CONECTADO" : "● NÃO CONECTADO");
   setText("#loginMessage", message);
+}
+
+function updateAccountAccess(signedIn) {
+  const button = $("#accountAccessButton");
+  if (!button) return;
+  button.textContent = signedIn ? "Minha conta" : "Entrar";
+  button.dataset.page = signedIn ? "profile" : "login";
 }
 
 function requireAccount() {
@@ -109,6 +164,23 @@ function renderGroupCard(group, occupied, participantQuotas = []) {
     article.append(details);
   }
 
+  const gameSet = (group.gameSets || []).find(set => Number(set.round_number) === Number(group.current_round));
+  if (gameSet?.games?.length) {
+    const preview = makeElement("details", "group-game-preview");
+    preview.append(makeElement("summary", "", `Ver jogos desta rodada (${gameSet.games.length})`));
+    const gameList = makeElement("div", "game-preview-scroll");
+    for (const game of gameSet.games) {
+      const card = makeElement("article", "generated-game");
+      card.append(makeElement("div", "generated-game-top", `${game.modality === "LOTOFACIL" ? "Lotofácil" : "Lotomania"} · ${game.game_code}`));
+      const numbers = makeElement("div", "generated-game-numbers");
+      for (const number of game.numbers) numbers.append(makeElement("span", "", String(number).padStart(2, "0")));
+      card.append(numbers);
+      gameList.append(card);
+    }
+    preview.append(gameList);
+    article.append(preview);
+  }
+
   if (["open", "awaiting_payment"].includes(group.status) && occupied < group.capacity_quotas) {
     const button = makeElement("button", "primary-btn full", "Ver contribuição");
     button.type = "button";
@@ -157,6 +229,7 @@ function renderGroups() {
     const progress = $("#adminMix031Progress");
     if (progress) progress.style.width = `${Math.min(100, available === 0 ? 100 : mixGroup.occupied / mixGroup.capacity_quotas * 100)}%`;
   }
+  updateGameGenerationButton();
 
   const selectedGroup = groupRows.find(group => group.code === selectedGroupCode);
   const pendingMixQuota = ownQuotas.find(quota => quota.group_id === selectedGroup?.id && ["pending", "reserved"].includes(quota.status));
@@ -226,10 +299,44 @@ async function loadGroups() {
   if (quotasError) throw quotasError;
 
   ownQuotas = quotas || [];
+  const groupIds = (groups || []).map(group => group.id);
+  let gameSetRows = [];
+  if (groupIds.length) {
+    const { data, error } = await supabase.from("game_sets")
+      .select("id, group_id, round_number, version_number, version_type")
+      .in("group_id", groupIds)
+      .eq("version_type", "definitive")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    gameSetRows = data || [];
+  }
+  const gameSetIds = gameSetRows.map(gameSet => gameSet.id);
+  let gameRows = [];
+  if (gameSetIds.length) {
+    const { data, error } = await supabase.from("games")
+      .select("id, game_set_id, game_code, modality, numbers")
+      .in("game_set_id", gameSetIds)
+      .order("game_code", { ascending: true });
+    if (error) throw error;
+    gameRows = data || [];
+  }
+  const gamesBySet = new Map();
+  for (const game of gameRows) {
+    const rows = gamesBySet.get(game.game_set_id) || [];
+    rows.push(game);
+    gamesBySet.set(game.game_set_id, rows);
+  }
+  const setsByGroup = new Map();
+  for (const gameSet of gameSetRows) {
+    const rows = setsByGroup.get(gameSet.group_id) || [];
+    rows.push({ ...gameSet, games: gamesBySet.get(gameSet.id) || [] });
+    setsByGroup.set(gameSet.group_id, rows);
+  }
   groupRows = await Promise.all((groups || []).map(async group => {
     const { data: occupied, error } = await supabase.rpc("get_group_occupancy", { p_group_code: group.code });
     if (error) throw error;
-    return { ...group, occupied: Number(occupied || 0) };
+    return { ...group, occupied: Number(occupied || 0), gameSets: setsByGroup.get(group.id) || [] };
   }));
   renderGroups();
 }
@@ -377,20 +484,248 @@ function renderAdminPayments() {
   setText("#pixPendingBadge", `${pending} pendentes`);
 }
 
+function renderAdminContests(contests) {
+  const list = $("#adminContestList");
+  if (!list) return;
+  list.replaceChildren();
+  if (!contests.length) {
+    adminContestHistoryReady = false;
+    list.className = "empty-state";
+    list.textContent = "Nenhum resultado oficial carregado.";
+    setText("#adminContestStatus", "Resultados oficiais ainda não sincronizados.");
+    updateGameGenerationButton();
+    return;
+  }
+
+  adminContestHistoryReady = ["LOTOFACIL", "LOTOMANIA"].every(modality =>
+    contests.filter(contest => contest.modality === modality).length === 15
+  );
+  list.className = "admin-contest-list";
+  const labels = { LOTOFACIL: "Lotofácil", LOTOMANIA: "Lotomania" };
+  const latestFetch = contests.reduce((latest, contest) =>
+    !latest || contest.fetched_at > latest ? contest.fetched_at : latest, null);
+  setText("#adminContestStatus", `Última sincronização: ${new Date(latestFetch).toLocaleString("pt-BR")}`);
+
+  for (const modality of ["LOTOFACIL", "LOTOMANIA"]) {
+    const rows = contests.filter(contest => contest.modality === modality);
+    const section = makeElement("section", "admin-contest-modality");
+    section.append(makeElement("h3", "", `${labels[modality]} · ${rows.length}/15 concursos`));
+    for (const contest of rows) {
+      const row = makeElement("div", "report-row");
+      const date = contest.draw_date
+        ? new Date(`${contest.draw_date}T00:00:00`).toLocaleDateString("pt-BR")
+        : "Data indisponível";
+      row.append(makeElement("b", "", `Concurso ${contest.contest_number} · ${date}`));
+      row.append(makeElement("small", "muted", contest.drawn_numbers.map(number => String(number).padStart(2, "0")).join(", ")));
+      section.append(row);
+    }
+    list.append(section);
+  }
+  updateGameGenerationButton();
+}
+
+function updateGameGenerationButton() {
+  const button = $("#generateGroupGames");
+  const createButton = $("#createGroupWithGamesButton");
+  if (!button) return;
+  if (createButton) {
+    createButton.disabled = !adminContestHistoryReady;
+    createButton.textContent = adminContestHistoryReady ? "Criar novo grupo com jogos" : "Sincronize os resultados primeiro";
+  }
+  const group = groupRows.find(row => row.code === $("#gameGenerationGroup")?.value);
+  const canAcceptParticipants = ["open", "awaiting_payment", "ready"].includes(group?.status);
+  const alreadyPublished = group && adminGameSets.some(gameSet =>
+    gameSet.group_id === group.id && Number(gameSet.round_number) === Number(group.current_round) && gameSet.version_type === "definitive"
+  );
+  button.disabled = !canAcceptParticipants || !adminContestHistoryReady || Boolean(alreadyPublished);
+  button.textContent = alreadyPublished
+    ? "Jogos já publicados nesta rodada"
+    : !group ? "Selecione um grupo"
+      : !canAcceptParticipants ? "Grupo não aceita participantes"
+        : adminContestHistoryReady ? "Gerar 30 jogos definitivos" : "Sincronize os resultados primeiro";
+}
+
+function renderGameGenerationGroups(groups) {
+  const selector = $("#gameGenerationGroup");
+  if (!selector) return;
+  const previous = selector.value;
+  const available = (groups || []).filter(group => ["open", "awaiting_payment", "ready"].includes(group.status));
+  selector.replaceChildren();
+  if (!available.length) {
+    selector.add(new Option("Nenhum grupo aceita participantes", ""));
+    updateGameGenerationButton();
+    return;
+  }
+  for (const group of available) selector.add(new Option(`${group.code} · ${group.title}`, group.code));
+  selector.value = available.some(group => group.code === previous)
+    ? previous
+    : available.find(group => group.code === "MIX-031")?.code || available[0].code;
+  selector.onchange = updateGameGenerationButton;
+  updateGameGenerationButton();
+}
+
+function renderOfficialRegistrationControls(groups) {
+  const selector = $("#officialRegistrationGroup");
+  const button = $("#confirmMixOfficialRegistration");
+  if (!selector || !button) return;
+  const previous = selector.value;
+  const registeredKeys = new Set(adminBetRegistrations.map(row => `${row.group_id}:${row.round_number}`));
+  const available = (groups || []).filter(group => group.status === "ready" &&
+    adminGameSets.some(gameSet => gameSet.group_id === group.id && Number(gameSet.round_number) === Number(group.current_round)) &&
+    !registeredKeys.has(`${group.id}:${group.current_round}`)
+  );
+  selector.replaceChildren();
+  if (!available.length) {
+    selector.add(new Option("Nenhum grupo pronto para registrar", ""));
+    button.disabled = true;
+    setText("#mixOfficialStatus", adminBetRegistrations.length ? "Apostas registradas" : "Aguardando grupo completo");
+  } else {
+    for (const group of available) {
+      selector.add(new Option(`${group.code} · ${group.title} · rodada ${group.current_round}`, `${group.code}|${group.current_round}`));
+    }
+    selector.value = available.some(group => `${group.code}|${group.current_round}` === previous)
+      ? previous
+      : `${available[0].code}|${available[0].current_round}`;
+    button.disabled = false;
+    setText("#mixOfficialStatus", "Aguardando registro");
+  }
+  selector.onchange = () => setText("#mixOfficialStatus", "Aguardando registro");
+
+  const groupById = new Map((groups || []).map(group => [group.id, group]));
+  const history = $("#mixOfficialHistory");
+  if (history) {
+    history.replaceChildren();
+    if (!adminBetRegistrations.length) {
+      history.append(makeElement("small", "", "Nenhuma rodada registrada ainda."));
+    } else {
+      for (const registration of adminBetRegistrations) {
+        const group = groupById.get(registration.group_id);
+        const row = makeElement("div", "mix-official-history-row");
+        row.append(makeElement("b", "", `${group?.code || "Grupo"} · rodada ${registration.round_number} · ${money(registration.total_paid_cents)}`));
+        row.append(makeElement("span", "", `LF #${registration.lotofacil_contest} · LM #${registration.lotomania_contest}`));
+        row.append(makeElement("small", "", `Confirmado em ${new Date(registration.confirmed_at).toLocaleString("pt-BR")}`));
+        history.append(row);
+      }
+    }
+  }
+}
+
+function renderPrizeDistributionControls(groups) {
+  const selector = $("#prizeDistributionGroup");
+  const calculateButton = $("#calculateGroupPrizeButton");
+  const confirmButton = $("#confirmGroupPrizeButton");
+  if (!selector || !calculateButton || !confirmButton) return;
+
+  const previous = selector.value;
+  pendingGroupPrizeCalculation = null;
+  confirmButton.disabled = true;
+  confirmButton.textContent = "Confirmar rateio e creditar saldos";
+  const preview = $("#groupPrizePreview");
+  preview.replaceChildren(makeElement("div", "empty-state", "Selecione uma rodada registrada para calcular."));
+  setText("#groupPrizeStatus", "Nenhum rateio calculado.");
+  const distributedKeys = new Set(adminPrizeDistributions.map(row => `${row.group_id}:${row.round_number}`));
+  const available = adminBetRegistrations.filter(row => row.status === "registered" &&
+    !distributedKeys.has(`${row.group_id}:${row.round_number}`)
+  );
+  const groupById = new Map((groups || []).map(group => [group.id, group]));
+  selector.replaceChildren();
+  if (!available.length) {
+    selector.add(new Option("Nenhuma rodada aguardando rateio", ""));
+    calculateButton.disabled = true;
+  } else {
+    for (const registration of available) {
+      const group = groupById.get(registration.group_id);
+      selector.add(new Option(`${group?.code || "Grupo"} · rodada ${registration.round_number}`, `${group?.code || ""}|${registration.round_number}`));
+    }
+    selector.value = available.some(row => `${groupById.get(row.group_id)?.code || ""}|${row.round_number}` === previous)
+      ? previous
+      : selector.options[0].value;
+    calculateButton.disabled = false;
+  }
+  selector.onchange = () => {
+    pendingGroupPrizeCalculation = null;
+    confirmButton.disabled = true;
+    confirmButton.textContent = "Confirmar rateio e creditar saldos";
+    const preview = $("#groupPrizePreview");
+    preview.replaceChildren(makeElement("div", "empty-state", "Calcule a prévia desta rodada."));
+    setText("#groupPrizeStatus", "Nenhum rateio calculado.");
+  };
+
+  const history = $("#adminPrizeDistributionHistory");
+  if (history) {
+    history.replaceChildren();
+    for (const distribution of adminPrizeDistributions) {
+      const group = groupById.get(distribution.group_id);
+      history.append(makeElement("div", "admin-audit-row", `${group?.code || "Grupo"} · rodada ${distribution.round_number} · ${money(distribution.total_prize_cents)} rateados em ${new Date(distribution.created_at).toLocaleString("pt-BR")}`));
+    }
+  }
+}
+
+function renderGroupPrizeCalculation(calculation) {
+  const preview = $("#groupPrizePreview");
+  preview.replaceChildren();
+  const summary = makeElement("div", "admin-list-card");
+  const details = makeElement("div");
+  details.append(makeElement("b", "", `${calculation.group_code} · rodada ${calculation.round_number}`));
+  details.append(makeElement("small", "", `Lotofácil #${calculation.lotofacil_contest}: ${money(calculation.lotofacil_prize_cents)} · Lotomania #${calculation.lotomania_contest}: ${money(calculation.lotomania_prize_cents)}`));
+  details.append(makeElement("strong", "", `Total apurado: ${money(calculation.total_prize_cents)}`));
+  summary.append(details);
+  preview.append(summary);
+
+  const wins = makeElement("section", "admin-list-card");
+  const winDetails = makeElement("div");
+  winDetails.append(makeElement("b", "", `Jogos premiados (${calculation.winning_games.length})`));
+  if (!calculation.winning_games.length) {
+    winDetails.append(makeElement("small", "", "Nenhum dos jogos atingiu uma faixa de prêmio."));
+  } else {
+    for (const game of calculation.winning_games) {
+      winDetails.append(makeElement("small", "", `${game.game_code} · ${game.hits} acertos · ${money(game.prize_cents)}`));
+    }
+  }
+  wins.append(winDetails);
+  preview.append(wins);
+
+  const shares = makeElement("section", "admin-list-card");
+  const shareDetails = makeElement("div");
+  shareDetails.append(makeElement("b", "", `Rateio proporcional (${calculation.paid_quota_count} cotas pagas)`));
+  for (const share of calculation.shares) {
+    shareDetails.append(makeElement("small", "", `${share.full_name} · ${share.quota_count} cotas · ${money(share.amount_cents)}`));
+  }
+  shares.append(shareDetails);
+  preview.append(shares);
+}
+
 async function loadAdminData() {
   if (currentProfile?.role !== "admin") return;
-  const [{ data: payments, error: paymentsError }, { data: withdrawals, error: withdrawalsError }, { data: profiles, error: profilesError }, { data: groups, error: groupsError }, { data: logs, error: logsError }] = await Promise.all([
+  const [{ data: payments, error: paymentsError }, { data: withdrawals, error: withdrawalsError }, { data: profiles, error: profilesError }, { data: groups, error: groupsError }, { data: lotofacilContests, error: lotofacilContestsError }, { data: lotomaniaContests, error: lotomaniaContestsError }, { data: gameSets, error: gameSetsError }, { data: registrations, error: registrationsError }, { data: distributions, error: distributionsError }, { data: logs, error: logsError }] = await Promise.all([
     supabase.from("payments").select("id, quota_id, group_id, participant_id, amount_cents, status, created_at").order("created_at", { ascending: false }).limit(200),
     supabase.from("withdrawals").select("id, participant_id, amount_cents, pix_key_snapshot, status, admin_note, created_at").order("created_at", { ascending: false }).limit(200),
     supabase.from("profiles").select("id, full_name, display_name, role, status").order("created_at", { ascending: false }).limit(500),
-    supabase.from("groups").select("id, code, status").limit(500),
+    supabase.from("groups").select("id, code, title, status, current_round").limit(500),
+    supabase.from("contests").select("modality, contest_number, draw_date, drawn_numbers, fetched_at").eq("modality", "LOTOFACIL").order("contest_number", { ascending: false }).limit(15),
+    supabase.from("contests").select("modality, contest_number, draw_date, drawn_numbers, fetched_at").eq("modality", "LOTOMANIA").order("contest_number", { ascending: false }).limit(15),
+    supabase.from("game_sets").select("id, group_id, round_number, version_type").eq("version_type", "definitive").order("created_at", { ascending: false }).limit(500),
+    supabase.from("bet_registrations").select("id, group_id, round_number, lotofacil_contest, lotomania_contest, total_paid_cents, status, confirmed_by, confirmed_at, created_at").order("created_at", { ascending: false }).limit(500),
+    supabase.from("group_prize_distributions").select("id, group_id, round_number, total_prize_cents, created_at").order("created_at", { ascending: false }).limit(500),
     supabase.from("admin_logs").select("action, entity_type, details, created_at").order("created_at", { ascending: false }).limit(100)
   ]);
   if (paymentsError) throw paymentsError;
   if (withdrawalsError) throw withdrawalsError;
   if (profilesError) throw profilesError;
   if (groupsError) throw groupsError;
+  if (lotofacilContestsError) throw lotofacilContestsError;
+  if (lotomaniaContestsError) throw lotomaniaContestsError;
+  if (gameSetsError) throw gameSetsError;
+  if (registrationsError) throw registrationsError;
+  if (distributionsError) throw distributionsError;
   if (logsError) throw logsError;
+  adminGameSets = gameSets || [];
+  adminBetRegistrations = registrations || [];
+  adminPrizeDistributions = distributions || [];
+  renderGameGenerationGroups(groups || []);
+  renderAdminContests([...(lotofacilContests || []), ...(lotomaniaContests || [])]);
+  renderOfficialRegistrationControls(groups || []);
+  renderPrizeDistributionControls(groups || []);
 
   const paymentRows = payments || [];
   const participantIds = [...new Set(paymentRows.map(payment => payment.participant_id))];
@@ -453,6 +788,7 @@ async function loadAdminData() {
 
 async function refreshSession() {
   if (!supabase) {
+    updateAccountAccess(false);
     setConnectionStatus(false, "Supabase não configurado. Configure URL e chave pública antes de operar.");
     setText("#profileName", "Visitante");
     setText("#homeBalance", money(0));
@@ -464,6 +800,7 @@ async function refreshSession() {
   currentUser = user;
   if (!currentUser) {
     currentProfile = null;
+    updateAccountAccess(false);
     setConnectionStatus(true, "Supabase conectado. Entre ou crie sua conta.");
     setText("#profileName", "Visitante");
     setText("#profileRole", "Entre para acessar sua conta.");
@@ -483,6 +820,7 @@ async function refreshSession() {
     throw new Error("Perfil não encontrado ou conta desativada. Contate o administrador.");
   }
   currentProfile = profile;
+  updateAccountAccess(true);
   const displayName = profile.display_name || profile.full_name;
   const initials = profile.full_name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
   setText("#welcomeName", displayName);
@@ -578,7 +916,7 @@ async function createQuotaPayment() {
     notify("Cotas reservadas. O pagamento aguarda conferência manual.");
     await Promise.all([loadGroups(), loadWalletData()]);
   } finally {
-    button.disabled = false;
+    button.disabled = Boolean(pendingGroupPrizeCalculation);
   }
 }
 
@@ -687,6 +1025,175 @@ async function createGroup() {
   await Promise.all([loadGroups(), loadAdminData()]);
 }
 
+async function syncOfficialContests() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  const button = $("#syncContestsButton");
+  button.disabled = true;
+  button.textContent = "Buscando resultados…";
+  setText("#adminContestStatus", "Consultando e validando os resultados oficiais…");
+  try {
+    const { data, error } = await supabase.functions.invoke("sync-contests");
+    if (error) throw error;
+    await loadAdminData();
+    notify(data?.message || "Resultados sincronizados.");
+  } catch (error) {
+    setText("#adminContestStatus", `Falha na sincronização: ${error.message || "erro desconhecido"}`);
+    throw error;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Buscar últimos 15";
+  }
+}
+
+async function generateMixGames() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  const groupCode = $("#gameGenerationGroup").value;
+  if (!groupCode) throw new Error("Selecione o grupo para gerar os jogos.");
+  if (!window.confirm(`Gerar e publicar 30 jogos para ${groupCode} com base nos últimos 15 concursos de cada modalidade? Isso não registra apostas na CAIXA.`)) return;
+
+  const button = $("#generateGroupGames");
+  button.disabled = true;
+  button.textContent = "Gerando jogos…";
+  setText("#gameGenerationStatus", "Validando grupo, concursos e combinações…");
+  try {
+    const { data, error } = await supabase.functions.invoke("generate-group-games", { body: { groupCode } });
+    if (error) throw error;
+    setText("#gameGenerationStatus", data?.message || "Jogos salvos para esta rodada.");
+    notify(data?.message || "Jogos definitivos gerados e salvos.");
+    await Promise.all([loadGroups(), loadAdminData()]);
+  } catch (error) {
+    setText("#gameGenerationStatus", `Falha ao gerar jogos: ${error.message || "erro desconhecido"}`);
+    throw error;
+  } finally {
+    updateGameGenerationButton();
+  }
+}
+
+async function createGroupWithGames() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  if (!adminContestHistoryReady) throw new Error("Sincronize os últimos 15 concursos de cada modalidade antes de criar o grupo.");
+  const code = window.prompt("Código do novo grupo (ex.: MIX-032):", "MIX-032");
+  if (code === null) return;
+  const title = window.prompt("Nome do grupo:");
+  if (title === null) return;
+  const capacity = Number(window.prompt("Capacidade de cotas (1 a 10):", "10"));
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > 10 || title.trim().length < 3) {
+    throw new Error("Informe nome e capacidade válidos (1 a 10 cotas).");
+  }
+  if (!window.confirm(`Criar ${code.trim().toUpperCase()} com 30 jogos gerados a partir dos últimos 15 concursos de cada modalidade?`)) return;
+
+  const button = $("#createGroupWithGamesButton");
+  button.disabled = true;
+  button.textContent = "Criando grupo e jogos…";
+  setText("#gameGenerationStatus", "Validando resultados e criando o grupo com seus jogos…");
+  try {
+    const { data, error } = await supabase.functions.invoke("generate-group-games", {
+      body: { createGroup: true, code, title, capacityQuotas: capacity }
+    });
+    if (error) throw error;
+    setText("#gameGenerationStatus", data?.message || "Grupo criado com jogos publicados.");
+    notify(data?.message || "Grupo criado com jogos publicados.");
+    await Promise.all([loadGroups(), loadAdminData()]);
+  } catch (error) {
+    setText("#gameGenerationStatus", `Falha ao criar grupo: ${error.message || "erro desconhecido"}`);
+    throw error;
+  } finally {
+    updateGameGenerationButton();
+  }
+}
+
+async function recordOfficialRegistration() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  const [groupCode, roundValue] = $("#officialRegistrationGroup").value.split("|");
+  const group = groupRows.find(row => row.code === groupCode && Number(row.current_round) === Number(roundValue));
+  const lotofacilContest = Number($("#mixOfficialContestLf").value);
+  const lotomaniaContest = Number($("#mixOfficialContestLm").value);
+  const totalPaid = Number($("#mixOfficialPaidAmount").value);
+  if (!group || !Number.isInteger(lotofacilContest) || lotofacilContest < 1 ||
+      !Number.isInteger(lotomaniaContest) || lotomaniaContest < 1 ||
+      !Number.isFinite(totalPaid) || totalPaid <= 0) {
+    throw new Error("Informe o grupo, os dois concursos e o valor total efetivamente pago.");
+  }
+  if (!window.confirm(`Confirmar as apostas realizadas para ${groupCode}, rodada ${roundValue}? Confira os concursos e o valor pago antes de continuar.`)) return;
+
+  const button = $("#confirmMixOfficialRegistration");
+  button.disabled = true;
+  try {
+    const { error } = await supabase.rpc("admin_record_bet_registration", {
+      p_group_code: groupCode,
+      p_round_number: Number(roundValue),
+      p_lotofacil_contest: lotofacilContest,
+      p_lotomania_contest: lotomaniaContest,
+      p_total_paid_cents: Math.round(totalPaid * 100)
+    });
+    if (error) throw error;
+    notify("Registro oficial salvo. O grupo foi fechado para novas participações nesta rodada.");
+    await Promise.all([loadGroups(), loadAdminData()]);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function calculateGroupPrize() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  const [groupCode, roundValue] = $("#prizeDistributionGroup").value.split("|");
+  const roundNumber = Number(roundValue);
+  if (!groupCode || !Number.isInteger(roundNumber)) throw new Error("Selecione uma rodada registrada.");
+
+  const button = $("#calculateGroupPrizeButton");
+  button.disabled = true;
+  setText("#groupPrizeStatus", "Calculando jogos e rateio proporcional…");
+  try {
+    const { data, error } = await supabase.rpc("admin_calculate_group_prize", {
+      p_group_code: groupCode,
+      p_round_number: roundNumber
+    });
+    if (error) throw error;
+    pendingGroupPrizeCalculation = data;
+    renderGroupPrizeCalculation(data);
+    const zeroPrize = Number(data.total_prize_cents) === 0;
+    const confirmButton = $("#confirmGroupPrizeButton");
+    confirmButton.disabled = false;
+    confirmButton.textContent = zeroPrize ? "Confirmar apuração sem créditos" : "Confirmar rateio e creditar saldos";
+    setText("#groupPrizeStatus", zeroPrize
+      ? "Nenhuma faixa premiada; a confirmação registrará a apuração sem alterar saldos."
+      : "Confira os resultados e os valores individuais antes de confirmar.");
+  } catch (error) {
+    pendingGroupPrizeCalculation = null;
+    $("#confirmGroupPrizeButton").disabled = true;
+    setText("#groupPrizeStatus", `Não foi possível calcular: ${error.message || "erro desconhecido"}`);
+    throw error;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function confirmGroupPrizeDistribution() {
+  if (currentProfile?.role !== "admin") throw new Error("Ação restrita ao administrador.");
+  if (!pendingGroupPrizeCalculation) throw new Error("Calcule a prévia antes de confirmar.");
+  const calculation = pendingGroupPrizeCalculation;
+  const total = money(calculation.total_prize_cents);
+  if (!window.confirm(`Confirma o rateio de ${total} para ${calculation.group_code}, rodada ${calculation.round_number}? O valor será dividido proporcionalmente às cotas pagas e creditado nas carteiras.`)) return;
+
+  const button = $("#confirmGroupPrizeButton");
+  button.disabled = true;
+  setText("#groupPrizeStatus", "Confirmando e creditando os saldos…");
+  try {
+    const { data, error } = await supabase.rpc("admin_distribute_group_prize", {
+      p_group_code: calculation.group_code,
+      p_round_number: calculation.round_number,
+      p_expected_calculation: calculation
+    });
+    if (error) throw error;
+    pendingGroupPrizeCalculation = null;
+    setText("#groupPrizeStatus", `Rateio confirmado. Total creditado: ${money(data.total_prize_cents)}.`);
+    notify("Rateio confirmado e registrado na auditoria.");
+    await loadAdminData();
+  } finally {
+    button.disabled = !pendingGroupPrizeCalculation;
+  }
+}
+
 async function logout() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
@@ -726,11 +1233,11 @@ document.addEventListener("click", event => {
     return;
   }
 
-  const actionButton = target.closest("#logoutButton, #withdrawOpen, #homeWithdrawOpen, #createQuotaPayment, #withdrawSubmit, #creditPrizeButton, #createGroupButton, [data-payment-action], [data-withdrawal-action], [data-pix-filter], [data-action='contribute'], [data-admin-demo], #openAdminDemo, #demoCloseMixGroup, #demoNextMixContest, #confirmMixOfficialRegistration");
+  const actionButton = target.closest("#logoutButton, #withdrawOpen, #homeWithdrawOpen, #createQuotaPayment, #withdrawSubmit, #creditPrizeButton, #createGroupButton, #syncContestsButton, #generateGroupGames, #createGroupWithGamesButton, #confirmMixOfficialRegistration, #calculateGroupPrizeButton, #confirmGroupPrizeButton, [data-payment-action], [data-withdrawal-action], [data-pix-filter], [data-action='contribute'], [data-admin-demo], #openAdminDemo, #demoCloseMixGroup, #demoNextMixContest");
   if (!actionButton) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  if (actionButton.matches("#demoCloseMixGroup, #demoNextMixContest, #confirmMixOfficialRegistration")) {
+  if (actionButton.matches("#demoCloseMixGroup, #demoNextMixContest")) {
     notify("Esta operação depende da integração de resultados e jogos no backend; permanece bloqueada para evitar registros locais fictícios.");
     return;
   }
@@ -766,17 +1273,28 @@ document.addEventListener("click", event => {
     : actionButton.matches("#withdrawSubmit") ? requestWithdrawal()
     : actionButton.matches("#creditPrizeButton") ? creditPrize()
     : actionButton.matches("#createGroupButton") ? createGroup()
+    : actionButton.matches("#syncContestsButton") ? syncOfficialContests()
+    : actionButton.matches("#generateGroupGames") ? generateMixGames()
+    : actionButton.matches("#createGroupWithGamesButton") ? createGroupWithGames()
+    : actionButton.matches("#confirmMixOfficialRegistration") ? recordOfficialRegistration()
+    : actionButton.matches("#calculateGroupPrizeButton") ? calculateGroupPrize()
+    : actionButton.matches("#confirmGroupPrizeButton") ? confirmGroupPrizeDistribution()
     : actionButton.matches("[data-payment-action]") ? reviewPayment(actionButton)
     : processWithdrawal(actionButton);
   operation.catch(error => reportError("concluir a operação", error));
 }, true);
 
 if (supabase) {
+  loadPublicContestStats().catch(error => {
+    console.error("Falha ao carregar estatísticas oficiais.", error);
+    publishContestStats({ error: "Falha ao carregar resultados oficiais." });
+  });
   refreshSession().catch(error => reportError("carregar os dados da conta", error));
   supabase.auth.onAuthStateChange(() => {
     window.setTimeout(() => refreshSession().catch(error => reportError("atualizar a sessão", error)), 0);
   });
 } else {
+  publishContestStats({ error: "Configure a conexão Supabase para carregar resultados oficiais." });
   setConnectionStatus(false, "Supabase não configurado. Configure URL e chave pública antes de operar.");
   window.showPage("login");
 }

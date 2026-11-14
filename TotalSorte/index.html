@@ -15,6 +15,7 @@
     <header class="topbar">
       <button class="icon-btn menu-btn" id="menuOpen" aria-label="Abrir menu">☰</button>
       <a class="brand" href="#" aria-label="TotalSorte início"><span class="brand-mark">T</span><span>Total<span class="brand-accent">Sorte</span></span></a>
+      <button class="text-button" id="accountAccessButton" type="button" data-page="login">Entrar</button>
       <button class="icon-btn notification-btn" aria-label="Notificações" id="notifyBtn">♧<i></i></button>
     </header>
 
@@ -42,19 +43,23 @@
         </div>
         <div class="section-heading"><div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Meus grupos</h2></div><button class="text-button" data-page="groups">Ver todos →</button></div>
         <div id="homeGroupsList"><div class="empty-state">Nenhum grupo carregado.</div></div>
-        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Operação em ativação</strong><p>Autenticação, reservas, carteira e ações administrativas usam o banco quando configurado. Resultados, geração de jogos e registro de apostas ainda estão bloqueados.</p></div></div>
+        <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Operação em ativação</strong><p>Autenticação, reservas, carteira e ações administrativas usam o banco quando configurado. A busca de resultados e a geração de jogos dependem do deploy das Edge Functions; o registro de apostas ainda está bloqueado.</p></div></div>
       </section>
 
       <section class="page" id="page-stats">
-        <div class="page-title"><p class="eyebrow">ANÁLISE DE DADOS</p><h1>Estatísticas</h1><p class="muted">Explore os últimos concursos de cada modalidade.</p></div>
+        <div class="page-title"><p class="eyebrow">ANÁLISE DE DADOS</p><h1>Estatísticas</h1><p class="muted">Explore os últimos concursos de cada modalidade.</p><p class="muted tiny" id="statsRefreshStatus" role="status">Carregando resultados oficiais…</p><button class="outline-btn" id="refreshStatsButton" type="button">Atualizar agora</button></div>
         <div class="segmented" role="tablist"><button class="selected" data-lottery="lotofacil">Lotofácil</button><button data-lottery="lotomania">Lotomania</button></div>
         <div class="panel">
           <div class="panel-heading"><div><span class="eyebrow">FREQUÊNCIA</span><h2>Dezenas em destaque</h2></div><span class="period-chip">Últimos 15</span></div>
           <div id="frequencyList" class="frequency-list"><div class="empty-state">Nenhum concurso registrado.</div></div>
         </div>
         <div class="two-panels">
-          <div class="mini-panel"><span class="eyebrow">PADRÃO</span><h3>Ímpares × pares</h3><p class="muted tiny">Aguardando resultados oficiais.</p></div>
-          <div class="mini-panel"><span class="eyebrow">REPETIÇÃO</span><h3>Concurso anterior</h3><p class="muted tiny">Aguardando resultados oficiais.</p></div>
+          <div class="mini-panel"><span class="eyebrow">PADRÃO</span><h3>Ímpares × pares</h3><p class="muted tiny" id="statsParity">Aguardando resultados oficiais.</p></div>
+          <div class="mini-panel"><span class="eyebrow">REPETIÇÃO</span><h3>Concurso anterior</h3><p class="muted tiny" id="statsRepeat">Aguardando resultados oficiais.</p></div>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><span class="eyebrow">HISTÓRICO OFICIAL</span><h2>Últimos 15 concursos</h2></div></div>
+          <div id="contestHistoryList" class="contest-history-list"><div class="empty-state">Aguardando resultados oficiais.</div></div>
         </div>
         <div class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Estatística não é previsão</strong><p>Frequências históricas descrevem resultados anteriores e não garantem nem aumentam a chance de um resultado futuro.</p></div></div>
       </section>
@@ -128,7 +133,7 @@
         <div class="panel auth-shortcuts"><button data-page="login">Entrar em outra conta <b>→</b></button><button data-page="register">Criar cadastro de cliente <b>→</b></button></div>
         <div class="panel menu-list"><button data-page="wallet"><span>◈</span> Carteira de premiações <b>→</b></button><button data-page="history"><span>◷</span> Histórico de atividades <b>→</b></button><button data-page="settings"><span>⚙</span> Configurações <b>→</b></button><button data-page="help"><span>?</span> Ajuda e suporte <b>→</b></button></div>
         <button class="outline-btn full" id="installProfile">Instalar TotalSorte no celular</button>
-        <p class="muted tiny center">TotalSorte 0.8.0</p>
+        <p class="muted tiny center">TotalSorte 0.9.2</p>
       </section>
 
       <section class="page" id="page-wallet">
@@ -169,9 +174,10 @@
           <p class="admin-note">Confira o extrato bancário antes de confirmar. A decisão e a justificativa são gravadas no banco e na auditoria.</p>
         </section>
         <section class="admin-panel-block" id="adminGroups"><div class="admin-section-head"><div><p class="eyebrow">PARTICIPAÇÃO</p><h2>Grupos MIX</h2></div><button class="outline-btn" id="createGroupButton" type="button">＋ Criar grupo</button></div>
-          <article class="admin-list-card"><div><b>MIX-031 · Estrela</b><small id="adminMix031Summary">Carregando grupo do banco…</small><div class="progress-track"><span id="adminMix031Progress" style="width:0%"></span></div><button class="outline-btn" id="demoCloseMixGroup" type="button" disabled title="O fechamento operacional requer integração de resultados no backend.">Fechamento de grupo indisponível</button><button class="outline-btn" id="demoNextMixContest" type="button" hidden disabled>Próxima rodada indisponível</button>
+          <article class="admin-list-card"><div><b>MIX-031 · Estrela</b><small id="adminMix031Summary">Carregando grupo do banco…</small><div class="progress-track"><span id="adminMix031Progress" style="width:0%"></span></div><button class="outline-btn" id="demoNextMixContest" type="button" hidden disabled>Próxima rodada indisponível</button>
             <div class="mix-official-registration" id="mixOfficialRegistration">
               <div class="mix-official-heading"><div><b>Registro oficial das apostas</b><small>Um único registro administrativo para o conjunto dos 30 jogos desta rodada.</small></div><span class="status-pill status-amber" id="mixOfficialStatus">Aguardando registro</span></div>
+              <label for="officialRegistrationGroup">Grupo pronto para registrar</label><select id="officialRegistrationGroup"><option value="">Carregando grupos…</option></select>
               <div class="mix-official-fields">
                 <label>Concurso Lotofácil<input id="mixOfficialContestLf" inputmode="numeric" placeholder="Nº do concurso"></label>
                 <label>Concurso Lotomania<input id="mixOfficialContestLm" inputmode="numeric" placeholder="Nº do concurso"></label>
@@ -182,6 +188,7 @@
               <div class="mix-official-history" id="mixOfficialHistory"><small>Nenhuma rodada registrada ainda.</small></div>
             </div>
           </div><span class="status-pill status-amber" id="adminMix031Status">Prévia</span></article>
+          <div class="admin-list-card"><div><b>Gerar jogos para um grupo</b><small>Os jogos publicados ficam visíveis antes da participação e não são alterados nesta rodada.</small><label for="gameGenerationGroup">Grupo existente</label><select id="gameGenerationGroup"><option value="">Carregando grupos…</option></select><button class="primary-btn full" id="generateGroupGames" type="button" disabled>Gerar 30 jogos definitivos</button><button class="outline-btn full" id="createGroupWithGamesButton" type="button" disabled>Criar novo grupo com jogos</button><p class="admin-note" id="gameGenerationStatus" role="status">Exige os últimos 15 concursos de cada modalidade. A geração não prevê resultados nem aumenta as chances matemáticas.</p></div></div>
         </section>
         <section class="admin-panel-block" id="adminCaixaAssistant">
           <div class="admin-section-head">
@@ -212,7 +219,16 @@
           <div class="panel"><h3>Creditar premiação</h3><label for="prizeParticipant">Participante</label><select id="prizeParticipant" required><option value="">Selecione</option></select><label for="prizeAmount">Valor (R$)</label><input id="prizeAmount" type="number" min="0.01" step="0.01" required><label for="prizeDescription">Descrição e referência</label><input id="prizeDescription" type="text" maxlength="160" placeholder="Ex.: prêmio do concurso 1234" required><button class="primary-btn full" id="creditPrizeButton" type="button">Creditar premiação</button></div>
         </section>
         <section class="admin-panel-block" id="adminWithdrawals"><div class="admin-section-head"><div><p class="eyebrow">FINANCEIRO</p><h2>Solicitações de saque</h2></div></div><div id="adminWithdrawalList" class="admin-pix-list"><div class="empty-state">Nenhuma solicitação carregada.</div></div></section>
-        <section class="admin-panel-block" id="adminContests"><div class="admin-section-head"><div><p class="eyebrow">APURAÇÃO</p><h2>Concursos e rodadas</h2></div></div><div id="adminContestList" class="empty-state">Integração de resultados oficiais ainda não configurada.</div></section>
+        <section class="admin-panel-block" id="adminContests"><div class="admin-section-head"><div><p class="eyebrow">APURAÇÃO</p><h2>Concursos e rodadas</h2></div><button class="outline-btn" id="syncContestsButton" type="button">Buscar últimos 15</button></div><p class="admin-note" id="adminContestStatus" role="status">Resultados oficiais ainda não sincronizados.</p><div id="adminContestList" class="empty-state">Nenhum resultado oficial carregado.</div></section>
+        <section class="admin-panel-block" id="adminPrizeDistribution">
+          <div class="admin-section-head"><div><p class="eyebrow">PREMIAÇÃO</p><h2>Conferir e ratear prêmio</h2><p class="muted">A apuração usa os concursos oficiais registrados e divide o total proporcionalmente às cotas pagas.</p></div></div>
+          <label for="prizeDistributionGroup">Grupo e rodada</label><select id="prizeDistributionGroup"><option value="">Aguardando apostas registradas</option></select>
+          <button class="outline-btn" id="calculateGroupPrizeButton" type="button" disabled>Calcular prévia</button>
+          <div id="groupPrizePreview" class="admin-report-grid"><div class="empty-state">Selecione uma rodada registrada para calcular.</div></div>
+          <button class="primary-btn full" id="confirmGroupPrizeButton" type="button" disabled>Confirmar rateio e creditar saldos</button>
+          <p class="admin-note" id="groupPrizeStatus" role="status">Nenhum rateio calculado.</p>
+          <div id="adminPrizeDistributionHistory" class="admin-audit-list"></div>
+        </section>
         <section class="admin-panel-block" id="adminReports"><div class="admin-section-head"><div><p class="eyebrow">VISÃO FINANCEIRA</p><h2>Relatórios</h2></div></div><div class="admin-report-grid" id="adminReportList"><div class="empty-state">Relatórios aguardando dados do banco.</div></div></section>
         <section class="admin-panel-block" id="adminNotifications"><div class="admin-section-head"><div><p class="eyebrow">COMUNICAÇÃO</p><h2>Notificações</h2></div></div><div class="admin-list-card"><div><b>Sem alertas carregados</b><small>As notificações serão conectadas em uma etapa posterior.</small></div></div></section>
         <section class="admin-panel-block" id="adminSettings"><div class="admin-section-head"><div><p class="eyebrow">SISTEMA</p><h2>Configurações</h2></div></div><div class="admin-list-card"><div><b>Limite por grupo</b><small>10 cotas · multiplicador individual de 1x a 5x</small></div><span class="status-pill status-green">Configurado</span></div><div class="admin-list-card"><div><b>Reserva de cotas</b><small>Liberação somente por ação administrativa</small></div><span class="status-pill status-green">Manual</span></div></section>

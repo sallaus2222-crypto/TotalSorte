@@ -131,3 +131,4 @@ body.light .caixa-number-grid button{background:#f4f7fc;color:#17243b;border-col
 body.light .caixa-number-grid button.selected{background:#e0f7fa;border-color:#1599aa;color:#087c8a}
 body.light .caixa-portal-frame{background:#f4f7fc}
 body.light .caixa-portal-frame-head{border-color:#d5deec}
+.contest-history-list{display:grid;gap:4px}.contest-history-item{padding:12px 0;border-bottom:1px solid var(--line)}.contest-history-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px}.contest-history-numbers{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.contest-history-numbers .ball{width:30px;height:30px;flex:0 0 30px;font-size:11px}

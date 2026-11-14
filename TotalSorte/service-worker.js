@@ -1,4 +1,4 @@
-const CACHE="totalsorte-v081-caixa-assisted-pilot";
+const CACHE="totalsorte-v092-public-statistics";
 const ASSETS=["./","./index.html","./css/style.css","./js/app.js","./js/supabase-config.js","./js/supabase-client.js","./js/supabase-workflows.js","./manifest.webmanifest","./assets/icons/icon-192.png","./assets/icons/icon-512.png",...Array.from({length:5},(_,i)=>`./assets/pix/pix-${i+1}x.png`)];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
