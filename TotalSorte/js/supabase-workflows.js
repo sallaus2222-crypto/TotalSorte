@@ -540,12 +540,6 @@ const submit = form.querySelector('[type="submit"]');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     await refreshSession();
-    if (selectedRole === "admin" && currentProfile?.role !== "admin") {
-      await supabase.auth.signOut();
-      currentUser = null;
-      currentProfile = null;
-      throw new Error("Esta conta não tem permissão de administrador.");
-    }
     window.showPage(currentProfile?.role === "admin" ? "admin" : "home");
     notify("Acesso autorizado.");
   } finally {
