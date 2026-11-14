@@ -534,8 +534,7 @@ async function signUp(form) {
 async function signIn(form) {
   const email = $("#loginUser").value.trim();
   const password = $("#loginPassword").value;
-  const selectedRole = document.querySelector("[data-role].selected")?.dataset.role;
-  const submit = form.querySelector('[type="submit"]');
+const submit = form.querySelector('[type="submit"]');
   submit.disabled = true;
   try {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
